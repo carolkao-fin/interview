@@ -127,31 +127,41 @@ foreach pat in invention_acc_app new_acc_app design_acc_app {
 
 * ==============================================================
 *  第三部分：PCM 內生性檢定（Wu-Hausman / DWH）
-*  estat endogenous：H0 = 指定變數為外生
-*  p < 0.05 → PCM 確實內生，需要 IV
-*  p >= 0.05 → PCM 可能外生，OLS 更有效率
+*
+*  注意：robust 模式下 estat endogenous 不接受指定單一變數。
+*  解法 A（快速）：不加變數名 → 同時測所有內生變數，支援 robust。
+*  解法 B（精確）：拿掉 robust，單獨測 PCM，再另跑 robust 版看係數。
+*  本腳本同時示範兩種，視需要擇一參考。
 * ==============================================================
 
 di as text _n "======================================================"
 di as text "  第三部分：PCM 內生性檢定（Wu-Hausman）"
 di as text "======================================================"
 
-* ── 3a. 從 efficiency_real 方程式檢定 PCM 的內生性 ──
-di as text _n "▶ 3a. PCM 內生性（efficiency_real 方程式）"
+* ── 3a-A. 解法 A：保留 robust，測所有內生變數（PCM + total_acc_app）──
+di as text _n "▶ 3a-A. 所有內生變數聯合內生性（robust，efficiency_real 方程式）"
 ivregress 2sls efficiency_real ///
     size Lev ROA FATA SHY_BR current_ratio age CAR i.year ///
     (PCM total_acc_app = MSO Stock_Pledging FHC_dummy BS L_CAR L_FATA L_MSO), ///
     robust
-estat endogenous PCM
-* p < 0.05 → PCM 確實內生
+estat endogenous
+* H0：PCM 與 total_acc_app 均外生；p < 0.05 → 至少一個內生
 
-* ── 3b. 從 PCM 方程式：efficiency_real 與 total_acc_app 的內生性 ──
-di as text _n "▶ 3b. efficiency_real + total_acc_app 的內生性（PCM 方程式）"
+* ── 3a-B. 解法 B：拿掉 robust，單獨測 PCM ──
+di as text _n "▶ 3a-B. 單獨測 PCM 內生性（不加 robust）"
+ivregress 2sls efficiency_real ///
+    size Lev ROA FATA SHY_BR current_ratio age CAR i.year ///
+    (PCM total_acc_app = MSO Stock_Pledging FHC_dummy BS L_CAR L_FATA L_MSO)
+estat endogenous PCM
+* p < 0.05 → PCM 確實內生，需要 IV
+
+* ── 3b. PCM 方程式角度：測 efficiency_real + total_acc_app（robust）──
+di as text _n "▶ 3b. efficiency_real + total_acc_app 聯合內生性（PCM 方程式，robust）"
 ivregress 2sls PCM ///
     MSO age CAR Stock_Pledging FHC_dummy Lev ROA size SHY_BR current_ratio i.year ///
     (efficiency_real total_acc_app = FATA BS L_CAR L_FATA L_MSO), ///
     robust
-estat endogenous efficiency_real total_acc_app
+estat endogenous
 
 
 * ==============================================================
